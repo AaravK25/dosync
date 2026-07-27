@@ -40,7 +40,8 @@ ocr = paddle.responses.create(
 text = ocr.output_text
 
 response = qwen.responses.create(
-    model="Qwen3.5-2b-UD-Q4_K_XL",
+    model="Qwen3-vl-2b-UD-Q4_K_XL",
+    max_output_tokens= 512,
     input= [
         {
             "role":"user",
@@ -85,8 +86,8 @@ response = qwen.responses.create(
 
                     OUTPUT FORMAT EXAMPLE:
                     [
-                        {{"medicine": "Paracetamol", "frequency": 2, "timing": "morning, night"}},
-                        {{"medicine": "Azithromycin", "frequency": 1, "timing": "morning"}}
+                        { {"medicine": "Paracetamol", "frequency": 2, "timing": "morning, night"} },
+                        { {"medicine": "Azithromycin", "frequency": 1, "timing": "morning"} }
                     ]
 
                     Now process the following OCR text and return only the JSON array:
