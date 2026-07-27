@@ -1,7 +1,17 @@
 import openai 
 import base64
+import cv2 as cv
+import time
 
-image_path= r"C:\Users\aarav\Downloads\Mobile Devices\PXL_20260727_155215076.MP.jpg"
+vid = cv.VideoCapture(0)
+
+for i in range(3):
+    return_value, image = vid.read()
+    cv.imwrite('opencv'+str(i)+'.jpg', image)
+del(vid)
+image_path = r"opencv1.jpg"
+
+time.sleep(1.2)
 
 def encode_image(image_path):
     with open(image_path,"rb") as image_file:
