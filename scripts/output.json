@@ -1,31 +1,30 @@
 [
     {
         "medicine": "Sinarest",
-        "frequency": 2,
+        "frequency": 3,
         "timing": [
-            "0800",
-            "1900"
+            "02:36",
+            "02:07",
+            "02:08"
         ]
     },
     {
         "medicine": "Meftal 500",
-        "frequency": 1,
+        "frequency": 2,
         "timing": [
-            "0800"
+            "01:07"
         ]
     },
     {
         "medicine": "Lanzol 30",
         "frequency": 1,
         "timing": [
-            "0800"
+            "00:38"
         ]
     },
     {
         "medicine": "Allegra 120",
         "frequency": 1,
-        "timing": [
-            "2200"
-        ]
+        "timing": []
     }
 ]

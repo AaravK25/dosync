@@ -24,7 +24,7 @@ from datetime import time as dtime
 from typing import Optional
 import time as time_mod
 
-SCHEDULE_URL = "http://127.0.0.1:5500"
+SCHEDULE_URL = "http://127.0.0.1:5500/schedule"
 _REQUIRED_KEYS = ("breakfast", "lunch", "dinner", "bed")
 
 

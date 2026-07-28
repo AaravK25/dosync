@@ -30,7 +30,7 @@ import serial.tools.list_ports
 # ---------------------------------------------------------------------------
 
 SERIAL_PORT = "COM6"          # Windows e.g. "COM5"; Linux/Mac e.g. "/dev/ttyACM0"
-BAUD_RATE = 9600            # must match Serial.begin(115200) on the Uno Q
+BAUD_RATE = 115200            # must match Serial.begin(115200) on the Uno Q
 OUTPUT_JSON_PATH = "output.json"
 
 ACTIVATE_HOLD_SECONDS = 3     # how long the servo stays in the "dispense" pose

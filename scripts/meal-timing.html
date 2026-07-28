@@ -34,6 +34,8 @@
     padding: 2rem 1rem 4rem;
   }
 
+
+
   .container {
     position: relative;
     z-index: 1;
@@ -126,6 +128,7 @@
   .time-card.lunch     { --card-color: var(--amber); }
   .time-card.dinner    { --card-color: var(--rose); }
   .time-card.bed       { --card-color: var(--indigo); }
+
 
   .breakfast .icon-wrap { color: var(--gold); }
   .lunch     .icon-wrap { color: var(--amber); }
@@ -250,6 +253,7 @@
     font-variant-numeric: tabular-nums;
   }
 
+
   .gap-badge {
     font-size: 0.68rem;
     color: var(--text-muted);
@@ -260,7 +264,7 @@
     margin-left: 0.5rem;
   }
 
-  .save-btn {
+  .export-btn {
     display: block;
     width: 100%;
     margin-top: 1.6rem;
@@ -277,41 +281,15 @@
     transition: opacity 0.2s, transform 0.15s;
   }
 
-  .save-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-  .save-btn:active { transform: translateY(0); }
+  .export-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .export-btn:active { transform: translateY(0); }
 
-  .save-btn:disabled {
+  .export-btn:disabled {
     background: var(--border);
     color: var(--text-muted);
     cursor: not-allowed;
     transform: none;
     opacity: 1;
-  }
-
-  .export-btn {
-    display: block;
-    width: 100%;
-    margin-top: 0.6rem;
-    padding: 0.9rem;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: transparent;
-    color: var(--text-muted);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 500;
-    letter-spacing: 0.03em;
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s, transform 0.15s;
-  }
-
-  .export-btn:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-1px); }
-  .export-btn:active { transform: translateY(0); }
-
-  .export-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    transform: none;
   }
 
   .toast {
@@ -355,7 +333,7 @@
 
     <div class="time-card breakfast">
       <div class="card-body">
-        <div class="card-label">Breakfast Time</div>
+        <div class="card-label">Breakfast <Time></Time></div>
       </div>
       <div class="time-input">
         <input type="time" id="breakfast" aria-label="Breakfast time">
@@ -411,9 +389,7 @@
       <span><span class="s-time bed" id="s-bed">—</span></span>
     </div>
 
-    <button class="save-btn" id="saveBtn" onclick="saveSchedule()">Save schedule</button>
-    <button class="export-btn" id="exportBtn" onclick="pushSchedule()" disabled>Send to Inference</button>
-    <button class="export-btn" id="dosyncBtn" onclick="startDosync()" disabled>Start Dosync</button>
+    <button class="export-btn" id="exportBtn" onclick="startDosync()" disabled>Start Dosync</button>
   </div>
 </div>
 
@@ -461,11 +437,12 @@
     const any = fields.some(f => vals[f]);
     document.getElementById('summary').classList.toggle('visible', any);
 
-    // Enable save/export only when all filled
+    // Enable the button only when all filled — unless Dosync is already
+    // active, in which case we leave its state to pollPipelineStatus().
     const all = fields.every(f => vals[f]);
-    document.getElementById('saveBtn').disabled = !all;
-    document.getElementById('exportBtn').disabled = !all;
-    document.getElementById('dosyncBtn').disabled = !all;
+    if (!dosyncActive) {
+      document.getElementById('exportBtn').disabled = !all;
+    }
   }
 
   fields.forEach(f => {
@@ -484,65 +461,89 @@
     } catch(e) {}
   });
 
-  function saveSchedule() {
-    const data = {};
-    fields.forEach(f => { data[f] = document.getElementById(f).value; });
-    localStorage.setItem('dailyRhythm', JSON.stringify(data));
-    showToast('✓ Schedule saved!');
+  let dosyncActive = false;
+  let pollTimer = null;
+
+  function resetExportBtn() {
+    dosyncActive = false;
+    if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+    const btn = document.getElementById('exportBtn');
+    const all = fields.every(f => document.getElementById(f).value);
+    btn.disabled = !all;
+    btn.textContent = 'Start Dosync';
   }
 
-  async function pushSchedule() {
+  async function startDosync() {
     const data = {};
     fields.forEach(f => { data[f] = document.getElementById(f).value; });
 
+    // Save locally first
+    localStorage.setItem('dailyRhythm', JSON.stringify(data));
+
+    if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+    dosyncActive = true;
     const btn = document.getElementById('exportBtn');
     btn.disabled = true;
-    btn.textContent = 'Sending…';
+    btn.textContent = 'Starting…';
 
     try {
-      const res = await fetch('http://127.0.0.1:5050/schedule', {
+      const res = await fetch('http://127.0.0.1:5500/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
       const json = await res.json();
       if (res.ok && json.ok) {
-        showToast('✓ Schedule sent to inference');
+        showToast(json.message || '✓ Dosync started');
+        pollPipelineStatus(0);
       } else {
         showToast('✗ Server error: ' + (json.error || res.status));
-      }
-    } catch (err) {
-      showToast('✗ Could not reach server (is it running?)');
-      console.error('pushSchedule error:', err);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Send to Inference';
-    }
-  }
-
-  async function startDosync() {
-    const btn = document.getElementById('dosyncBtn');
-    btn.disabled = true;
-    btn.textContent = 'Starting…';
-
-    try {
-      const res = await fetch('http://127.0.0.1:5500', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: 'd:/codes/dosync/scripts/main.py' }),
-      });
-      const json = await res.json();
-      if (res.ok && json.ok) {
-        showToast('✓ Dosync started');
-      } else {
-        showToast('✗ Server error: ' + (json.error || res.status));
+        resetExportBtn();
       }
     } catch (err) {
       showToast('✗ Could not reach server (is it running?)');
       console.error('startDosync error:', err);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Start Dosync';
+      resetExportBtn();
+    }
+  }
+
+  async function pollPipelineStatus(attempt) {
+    const MAX_ATTEMPTS = 300; // ~12.5 min at 2.5s interval
+    const btn = document.getElementById('exportBtn');
+
+    try {
+      const res = await fetch('http://127.0.0.1:5500/pipeline-status');
+      const json = await res.json();
+
+      if (res.ok && json.ok) {
+        const status = json.pipeline.status;
+
+        if (status === 'running_inference') {
+          btn.textContent = 'Reading prescription…';
+        } else if (status === 'monitoring') {
+          btn.textContent = '✓ Dosync is live';
+          showToast('✓ Dosync is live — monitoring doses');
+          return; // reached a stable end state, stop polling
+        } else if (status === 'error') {
+          showToast('✗ Dosync error: ' + (json.pipeline.error || 'unknown error'));
+          resetExportBtn();
+          return;
+        } else if (status === 'idle') {
+          // Reminder daemon exited cleanly on its own — nothing left to track.
+          resetExportBtn();
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('pipeline-status poll failed:', err);
+      // Keep trying — the server may be momentarily busy.
+    }
+
+    if (attempt < MAX_ATTEMPTS) {
+      pollTimer = setTimeout(() => pollPipelineStatus(attempt + 1), 2500);
+    } else {
+      showToast('Still running — check the server window for progress.');
+      resetExportBtn();
     }
   }
 
