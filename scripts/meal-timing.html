@@ -34,8 +34,6 @@
     padding: 2rem 1rem 4rem;
   }
 
-
-
   .container {
     position: relative;
     z-index: 1;
@@ -128,7 +126,6 @@
   .time-card.lunch     { --card-color: var(--amber); }
   .time-card.dinner    { --card-color: var(--rose); }
   .time-card.bed       { --card-color: var(--indigo); }
-
 
   .breakfast .icon-wrap { color: var(--gold); }
   .lunch     .icon-wrap { color: var(--amber); }
@@ -253,7 +250,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-
   .gap-badge {
     font-size: 0.68rem;
     color: var(--text-muted);
@@ -359,7 +355,7 @@
 
     <div class="time-card breakfast">
       <div class="card-body">
-        <div class="card-label">Breakfast <Time></Time></div>
+        <div class="card-label">Breakfast Time</div>
       </div>
       <div class="time-input">
         <input type="time" id="breakfast" aria-label="Breakfast time">
@@ -416,7 +412,8 @@
     </div>
 
     <button class="save-btn" id="saveBtn" onclick="saveSchedule()">Save schedule</button>
-    <button class="export-btn" id="exportBtn" onclick="exportJSON()" disabled>Integrate Schedule</button>
+    <button class="export-btn" id="exportBtn" onclick="pushSchedule()" disabled>Send to Inference</button>
+    <button class="export-btn" id="dosyncBtn" onclick="startDosync()" disabled>Start Dosync</button>
   </div>
 </div>
 
@@ -468,6 +465,7 @@
     const all = fields.every(f => vals[f]);
     document.getElementById('saveBtn').disabled = !all;
     document.getElementById('exportBtn').disabled = !all;
+    document.getElementById('dosyncBtn').disabled = !all;
   }
 
   fields.forEach(f => {
@@ -493,16 +491,59 @@
     showToast('✓ Schedule saved!');
   }
 
-  function exportJSON() {
+  async function pushSchedule() {
     const data = {};
     fields.forEach(f => { data[f] = document.getElementById(f).value; });
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'schedule.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    showToast('✓ schedule.json downloaded');
+
+    const btn = document.getElementById('exportBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    try {
+      const res = await fetch('http://127.0.0.1:5050/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        showToast('✓ Schedule sent to inference');
+      } else {
+        showToast('✗ Server error: ' + (json.error || res.status));
+      }
+    } catch (err) {
+      showToast('✗ Could not reach server (is it running?)');
+      console.error('pushSchedule error:', err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send to Inference';
+    }
+  }
+
+  async function startDosync() {
+    const btn = document.getElementById('dosyncBtn');
+    btn.disabled = true;
+    btn.textContent = 'Starting…';
+
+    try {
+      const res = await fetch('http://127.0.0.1:5500', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script: 'd:/codes/dosync/scripts/main.py' }),
+      });
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        showToast('✓ Dosync started');
+      } else {
+        showToast('✗ Server error: ' + (json.error || res.status));
+      }
+    } catch (err) {
+      showToast('✗ Could not reach server (is it running?)');
+      console.error('startDosync error:', err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Start Dosync';
+    }
   }
 
   function showToast(msg) {

@@ -131,9 +131,6 @@ def trigger_dose(ser, medicine, letters):
     send_char(ser, letters["off"])
 
 
-# ---------------------------------------------------------------------------
-# Scheduler loop
-# ---------------------------------------------------------------------------
 
 def run_scheduler(reminder_table, port=SERIAL_PORT, baud=BAUD_RATE):
     ser = serial.Serial(port, baud, timeout=1)

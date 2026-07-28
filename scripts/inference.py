@@ -3,7 +3,7 @@ import openai
 import base64
 import cv2 as cv
 import time as time_mod          
-from datetime import time as dtime  
+
 import subprocess
 import urllib.request
 import urllib.error
@@ -48,7 +48,7 @@ def start_server(cmd, name):
     proc = subprocess.Popen(
         cmd,
         cwd=SERVER_DIR,
-        creationflags=subprocess.CREATE_NEW_CONSOLE,  
+        creationflags=subprocess.CREATE_NO_WINDOW,  
     )
     _server_procs.append(proc)
     return proc
@@ -99,15 +99,7 @@ def capture_encode_pic():
             return base64.b64encode(image_file.read()).decode().strip()
 
 
-def parse_time(s):
-    h, m = map(int, s.split(":"))
-    return dtime(h, m)
-
-def obtain_timings(path):
-    with open(path) as f:
-        schedule = json.load(f)
-        times = {k: parse_time(v) for k, v in schedule.items()}
-        return times
+from schedule_client import obtain_timings  
 
 paddle = openai.OpenAI(
     base_url="http://127.0.0.1:8080",
@@ -167,7 +159,7 @@ def json_extract(text):
                         If not mentioned, output null.
                         3. timing — a JSON array of 24-hour time strings ("HH:MM") representing each 
                         dose time, calculated using the person's actual daily schedule provided below:
-                                {obtain_timings("schedule.json")}
+                                {obtain_timings()}
                         TIMING RULES:
                         - If the prescription gives a relative instruction like "30 min after lunch", 
                         "before dinner", "1 hour after breakfast", "at bedtime", etc., calculate the 
