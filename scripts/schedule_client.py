@@ -1,22 +1,3 @@
-"""
-schedule_client.py
-------------------
-Drop-in replacement for the `obtain_timings(path)` file-read in inference.py.
-
-Import and use
---------------
-    from schedule_client import obtain_timings
-
-    # Fetch live from the Flask server (blocks until available or timeout):
-    times = obtain_timings()
-
-    # Optional: fall back to a local file if the server is unreachable:
-    times = obtain_timings(fallback_path="schedule.json")
-
-The function returns the same dict[str, datetime.time] that the original
-`obtain_timings(path)` returned, so no other changes are needed in inference.py.
-"""
-
 import json
 import urllib.request
 import urllib.error
@@ -63,30 +44,6 @@ def obtain_timings(
     poll_interval: float = 2.0,
     poll_attempts: int = 1,
 ) -> dict[str, dtime]:
-    """
-    Fetch the meal/bed schedule and return it as a dict of datetime.time objects.
-
-    Parameters
-    ----------
-    fallback_path   : If given and the server is unreachable, read from this
-                      local JSON file instead (preserves old behaviour).
-    server_url      : URL of the Flask /schedule endpoint.
-    timeout         : Per-attempt HTTP timeout in seconds.
-    poll_interval   : Seconds to wait between retry attempts.
-    poll_attempts   : How many times to try the server before giving up /
-                      falling back. Set >1 to wait for the user to submit
-                      the schedule from the HTML page.
-
-    Returns
-    -------
-    dict mapping key → datetime.time, e.g.
-        {"breakfast": time(8, 0), "lunch": time(13, 0), ...}
-
-    Raises
-    ------
-    RuntimeError    : If the server is unreachable AND no fallback is given.
-    FileNotFoundError / json.JSONDecodeError : propagated from fallback read.
-    """
     raw: Optional[dict] = None
 
     for attempt in range(1, poll_attempts + 1):

@@ -1,47 +1,3 @@
-"""
-schedule_server.py
-------------------
-Lightweight Flask bridge between the Daily Rhythm HTML page and the rest of
-the Dosync pipeline (inference.py -> reminder_system.py).
-
-Endpoints
----------
-POST /schedule          - HTML page sends the schedule JSON here. On success
-                          this ALSO kicks off the Dosync pipeline in the
-                          background:
-                              1. inference.py         (OCR + medicine extraction,
-                                                        runs to completion)
-                              2. reminder_system.py    (dose monitor/dispenser,
-                                                        runs indefinitely)
-GET  /schedule           - inference.py (via schedule_client.py) reads the
-                          latest schedule from here.
-GET  /pipeline-status    - Poll this to see what the pipeline is doing right
-                          now: idle / running_inference / monitoring / error.
-GET  /status             - quick health-check / last-received timestamp.
-
-Run
----
-    python schedule_server.py
-
-Server listens on http://127.0.0.1:5500 by default.
-
-Notes
------
-- inference.py and reminder_system.py are launched using the SAME Python
-  interpreter that is running this server (sys.executable), and with this
-  script's own folder as both the working directory and script location —
-  so they must live alongside schedule_server.py, exactly as in this repo.
-- reminder_system.py runs forever (it's a dose scheduler loop), so it is
-  started with subprocess.Popen (fire-and-forget) rather than
-  subprocess.run. A background watcher thread tracks its exit in case it
-  ever crashes, so /pipeline-status can report that accurately.
-- Only one pipeline run is allowed at a time. If a schedule is submitted
-  while inference is still running, or while the reminder daemon is
-  already monitoring doses, the schedule is still saved but a NEW pipeline
-  run is NOT started (the response says so). Restart the server to run the
-  pipeline again from a clean state.
-"""
-
 import os
 import sys
 import threading
@@ -52,20 +8,12 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # allow the HTML page (file:// or any local origin) to POST here
-
-# ---------------------------------------------------------------------------
-# Schedule state
-# ---------------------------------------------------------------------------
+CORS(app) 
 
 _schedule: dict | None = None
 _last_updated: str | None = None
 
 REQUIRED_KEYS = {"breakfast", "lunch", "dinner", "bed"}
-
-# ---------------------------------------------------------------------------
-# Pipeline state
-# ---------------------------------------------------------------------------
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 INFERENCE_SCRIPT = os.path.join(SCRIPT_DIR, "inference.py")
@@ -73,8 +21,8 @@ REMINDER_SCRIPT = os.path.join(SCRIPT_DIR, "reminder_system.py")
 
 _pipeline_lock = threading.Lock()
 _pipeline_state = {
-    "status": "idle",       # idle | running_inference | monitoring | error
-    "stage": None,          # human-readable description of current stage
+    "status": "idle",       #idle or running_inference or monitoring orr error
+    "stage": None,          #description of current stage
     "error": None,
     "started_at": None,
     "finished_at": None,
@@ -92,7 +40,7 @@ def _pipeline_snapshot():
 
 
 def _launch_reminder_daemon():
-    """Start reminder_system.py as a background daemon (it runs forever)."""
+    """it should start reminder_system.py as a background daemon (it runs forever)."""
     print("[schedule_server] Launching reminder_system.py (daemon)...")
     proc = subprocess.Popen(
         [sys.executable, REMINDER_SCRIPT],
@@ -102,8 +50,6 @@ def _launch_reminder_daemon():
     def _watch():
         returncode = proc.wait()
         with _pipeline_lock:
-            # Only report a crash if we were still expecting this daemon to
-            # be running (avoids clobbering a later, intentional restart).
             if _pipeline_state["status"] == "monitoring":
                 if returncode != 0:
                     _pipeline_state.update({
@@ -178,11 +124,6 @@ def start_pipeline_if_idle() -> bool:
     threading.Thread(target=_run_pipeline_worker, daemon=True).start()
     return True
 
-
-# ---------------------------------------------------------------------------
-# Schedule validation
-# ---------------------------------------------------------------------------
-
 def _validate(data: dict) -> str | None:
     """Return an error string, or None if data is valid."""
     if not isinstance(data, dict):
@@ -202,14 +143,8 @@ def _validate(data: dict) -> str | None:
             return f"Value for '{key}' is out of range: {val!r}"
     return None
 
-
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
-
 @app.post("/schedule")
 def receive_schedule():
-    """Accept the schedule posted by the HTML page, then auto-start Dosync."""
     global _schedule, _last_updated
 
     data = request.get_json(silent=True)
