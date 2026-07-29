@@ -1,22 +1,3 @@
-"""
-reminder_system.py
-
-Reads the prescription JSON produced by inference.py (output.json: a list of
-{"medicine", "frequency", "timing", ...} objects), builds a daily dose
-schedule, and — at each scheduled time — talks to the Arduino Uno Q over
-pyserial to trigger the matching servo.
-
-Arduino protocol (matches the sketch you shared, unchanged):
-    'a' / 'b' / 'c' / 'd'  -> swing that servo to the "dispense" position
-    'A' / 'B' / 'C' / 'D'  -> return that same servo to the rest position
-This script only ever sends those 8 single characters. All servo motion,
-angles, PWM, etc. stay on the Arduino side exactly as you wrote it.
-
-Setup:
-    pip install pyserial
-    Edit SERIAL_PORT below (see list_serial_ports() to find it).
-"""
-
 import json
 import time
 import threading
@@ -25,33 +6,24 @@ from datetime import datetime
 import serial
 import serial.tools.list_ports
 
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
-
-SERIAL_PORT = "COM6"          # Windows e.g. "COM5"; Linux/Mac e.g. "/dev/ttyACM0"
-BAUD_RATE = 115200            # must match Serial.begin(115200) on the Uno Q
+SERIAL_PORT = "COM6"         
+BAUD_RATE = 115200            
 OUTPUT_JSON_PATH = "output.json"
 
-ACTIVATE_HOLD_SECONDS = 3     # how long the servo stays in the "dispense" pose
-CHECK_INTERVAL_SECONDS = 20   # how often the scheduler checks the clock
-STAGGER_SECONDS = 1           # gap between servos if two doses land at once
+ACTIVATE_HOLD_SECONDS = 3     
+CHECK_INTERVAL_SECONDS = 20   
+STAGGER_SECONDS = 1           #gap between servos if two doses land at once
 
-# The 4 servo channels are hardwired on the Arduino side (0/1/2/3 -> a/b/c/d).
-# Assign your 4 known medicines to them here:
+
 MEDICINE_SERVO_MAP = {
-    "sinarest": {"on": "a", "off": "A"},
+    "sinarest": {"on": "c", "off": "C"},
     "meftal":   {"on": "b", "off": "B"},
-    "allegra":  {"on": "c", "off": "C"},
     "lanzol":   {"on": "d", "off": "D"},
 }
 
 _ser_lock = threading.Lock()
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def list_serial_ports():
     """Print available serial ports, handy for finding the Uno Q's COM port."""
@@ -167,8 +139,7 @@ def run_scheduler(reminder_table, port=SERIAL_PORT, baud=BAUD_RATE):
 
 
 if __name__ == "__main__":
-    # Uncomment to discover your Arduino Uno Q's port name first:
-    # list_serial_ports()
+   
 
     prescriptions = load_prescriptions()
     reminder_table = build_reminder_table(prescriptions)

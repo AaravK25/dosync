@@ -237,9 +237,7 @@ def json_extract(text):
     return json_array
 
 
-# ---------------------------------------------------------------------------
-# Deterministic time resolution (Python, not the LLM)
-# ---------------------------------------------------------------------------
+
 
 _DEFAULT_DOSE_PLANS = {
     1: [("breakfast", "at", 0)],

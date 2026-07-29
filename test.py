@@ -1,24 +1,11 @@
-"""
-serial_test.py
-
-Quick test to verify serial commands reach the Arduino Uno Q and trigger servos.
-Run this BEFORE the full reminder system to confirm wiring + port + baud are correct.
-
-Usage:
-    python serial_test.py
-"""
-
 import time
 import serial
 import serial.tools.list_ports
 
-# ---------------------------------------------------------------------------
-# Edit these to match your setup
-# ---------------------------------------------------------------------------
-SERIAL_PORT = "COM6"        # Windows: "COM5" / "COM6" etc. | Linux/Mac: "/dev/ttyACM0"
-BAUD_RATE   = 115200        # must match Serial.begin(115200) on the Uno Q
-HOLD_SECS   = 2             # seconds servo stays at dispense position before reset
-# ---------------------------------------------------------------------------
+SERIAL_PORT = "COM6"        
+BAUD_RATE   = 115200        
+HOLD_SECS   = 2             
+
 
 SERVO_MAP = {
     "a": "Sinarest  (servo 0)",
@@ -65,7 +52,7 @@ def interactive_menu(ser):
 
     while True:
         cmd = input("\nCommand: ").strip()
-        if not cmd:
+        if not cmd: 
             continue
         if cmd == "q":
             break
