@@ -12,7 +12,7 @@ OUTPUT_JSON_PATH = "output.json"
 
 ACTIVATE_HOLD_SECONDS = 3     
 CHECK_INTERVAL_SECONDS = 20   
-STAGGER_SECONDS = 1           #gap between servos if two doses land at once
+STAGGER_SECONDS = 1           #gap between servos if two doses land at once .
 
 
 MEDICINE_SERVO_MAP = {
